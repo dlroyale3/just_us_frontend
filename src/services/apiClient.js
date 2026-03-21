@@ -76,6 +76,7 @@ async function requestJson(path, options = {}) {
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? "GET",
+      credentials: "include",
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined
     });

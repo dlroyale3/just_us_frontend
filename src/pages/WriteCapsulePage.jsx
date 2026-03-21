@@ -173,11 +173,13 @@ function parseDateOrToday(value) {
 }
 
 function buildScheduledMessagesCableUrl(accessToken) {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
-  const parsedUrl = new URL(apiBaseUrl);
+  const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000/cable";
+  const parsedUrl = new URL(wsBaseUrl);
 
-  parsedUrl.protocol = parsedUrl.protocol === "https:" ? "wss:" : "ws:";
-  parsedUrl.pathname = "/cable";
+  if (!parsedUrl.pathname || parsedUrl.pathname === "/") {
+    parsedUrl.pathname = "/cable";
+  }
+
   parsedUrl.search = "";
   parsedUrl.searchParams.set("token", accessToken);
 
