@@ -108,13 +108,11 @@ function sliderValueToAmbientGain(sliderValue) {
 }
 
 function buildCoupleCableUrl(accessToken) {
-  const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000/cable";
-  const parsedUrl = new URL(wsBaseUrl);
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+  const parsedUrl = new URL(apiBaseUrl);
 
-  if (!parsedUrl.pathname || parsedUrl.pathname === "/") {
-    parsedUrl.pathname = "/cable";
-  }
-
+  parsedUrl.protocol = parsedUrl.protocol === "https:" ? "wss:" : "ws:";
+  parsedUrl.pathname = "/cable";
   parsedUrl.search = "";
   parsedUrl.searchParams.set("token", accessToken);
 
@@ -181,10 +179,6 @@ function resolveIncomingLiveSenderId(payload) {
   return toPositiveInteger(messageCandidate?.sender_id ?? payload?.sender_id);
 }
 
-function areNotificationCountsEqual(left, right) {
-  return left.live === right.live && left.scheduled === right.scheduled;
-}
-
 export function DynamicBackgroundLayout({ children }) {
   const { logout, status, user } = useAuth();
   const {
@@ -210,7 +204,8 @@ export function DynamicBackgroundLayout({ children }) {
     setIsCelebrateMode,
     fireworksIntensity,
     setFireworksIntensity,
-    applySyncSettings
+    applySyncSettings,
+    resetSettings
   } = useSettings();
   const isPaired = status === "paired";
   const previousAuthStatusRef = useRef(status);
@@ -239,15 +234,10 @@ export function DynamicBackgroundLayout({ children }) {
     setIsControlPanelOpen(false);
     setIsSidebarOpen(false);
     setControlsPresentation("fixed");
-    setNotificationCounts((previousCounts) => {
-      if (previousCounts.live === 0 && previousCounts.scheduled === 0) {
-        return previousCounts;
-      }
-
-      return { live: 0, scheduled: 0 };
-    });
+    setNotificationCounts({ live: 0, scheduled: 0 });
+    resetSettings();
     hasAutoUnmutedOnFirstInteractionRef.current = false;
-  }, [status]);
+  }, [resetSettings, status]);
 
   const registerAudioTrack = (audioTrack) => {
     if (audioTrack) {
@@ -645,23 +635,17 @@ export function DynamicBackgroundLayout({ children }) {
     return () => {
       window.removeEventListener("keydown", handleEscapeKey);
     };
-  }, []);
+  }, [isControlPanelOpen, isSidebarOpen, setIsControlPanelOpen, setIsSidebarOpen]);
 
   const clearNotificationCount = useCallback((type) => {
     if (type !== "live" && type !== "scheduled") {
       return;
     }
 
-    setNotificationCounts((previousCounts) => {
-      if (previousCounts[type] === 0) {
-        return previousCounts;
-      }
-
-      return {
-        ...previousCounts,
-        [type]: 0
-      };
-    });
+    setNotificationCounts((previousCounts) => ({
+      ...previousCounts,
+      [type]: 0
+    }));
   }, []);
 
   const playNotificationSound = useCallback((type) => {
@@ -688,10 +672,6 @@ export function DynamicBackgroundLayout({ children }) {
       const fallbackCounts = replace ? { live: 0, scheduled: 0 } : previousCounts;
       const nextCounts = resolveNotificationCounts(payload, fallbackCounts);
 
-      if (areNotificationCountsEqual(previousCounts, nextCounts)) {
-        return previousCounts;
-      }
-
       if (playScheduledSound && nextCounts.scheduled > previousCounts.scheduled) {
         playScheduledNotificationSound();
       }
@@ -702,26 +682,14 @@ export function DynamicBackgroundLayout({ children }) {
 
   useEffect(() => {
     if (!isPaired) {
-      setNotificationCounts((previousCounts) => {
-        if (previousCounts.live === 0 && previousCounts.scheduled === 0) {
-          return previousCounts;
-        }
-
-        return { live: 0, scheduled: 0 };
-      });
+      setNotificationCounts({ live: 0, scheduled: 0 });
       return undefined;
     }
 
     const accessToken = getAccessToken();
 
     if (!accessToken) {
-      setNotificationCounts((previousCounts) => {
-        if (previousCounts.live === 0 && previousCounts.scheduled === 0) {
-          return previousCounts;
-        }
-
-        return { live: 0, scheduled: 0 };
-      });
+      setNotificationCounts({ live: 0, scheduled: 0 });
       return undefined;
     }
 
@@ -740,7 +708,7 @@ export function DynamicBackgroundLayout({ children }) {
     return () => {
       isCancelled = true;
     };
-  }, [isPaired, setNotificationCountsFromPayload]);
+  }, [isPaired, setNotificationCountsFromPayload, status]);
 
   useEffect(() => {
     if (!isPaired) {
@@ -763,15 +731,6 @@ export function DynamicBackgroundLayout({ children }) {
           channel: "CoupleChannel"
         },
         {
-          connected() {
-            console.info("[PERF] WebSocket Connected");
-          },
-          disconnected() {
-            console.error("[PERF] WebSocket Disconnected/Error", new Error("ActionCable disconnected"));
-          },
-          rejected() {
-            console.error("[PERF] WebSocket Disconnected/Error", new Error("ActionCable subscription rejected"));
-          },
           received(payload) {
             const eventName = typeof payload?.event === "string" ? payload.event : "";
 
@@ -803,7 +762,7 @@ export function DynamicBackgroundLayout({ children }) {
 
       consumer?.disconnect();
     };
-  }, [isPaired, playReceiveLiveSound, setNotificationCountsFromPayload, user?.id]);
+  }, [isPaired, playReceiveLiveSound, setNotificationCountsFromPayload, status, user?.id]);
 
   const controlsContextValue = useMemo(() => ({
     isControlPanelOpen,

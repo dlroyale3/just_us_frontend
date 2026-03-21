@@ -123,9 +123,6 @@ export function LandingPage() {
     flow: "implicit",
     scope: "openid profile email",
     onSuccess: async (tokenResponse) => {
-      console.info("[PERF-AUTH] landing google onSuccess before try", {
-        hasTokenResponse: Boolean(tokenResponse)
-      });
       clearGooglePopupGuardTimeout();
       const token = tokenResponse?.access_token ?? tokenResponse?.id_token ?? tokenResponse?.code;
 
@@ -136,18 +133,13 @@ export function LandingPage() {
       }
 
       try {
-        console.info("[PERF-AUTH] landing google onSuccess entered try", {
-          hasToken: Boolean(token)
-        });
         await signInWithGoogleCredential(token);
-        console.info("[PERF-AUTH] landing google signInWithGoogleCredential resolved");
 
         const pendingInviteCode = sanitizeInviteCode(getPendingInviteCode());
 
         if (pendingInviteCode) {
           try {
             await acceptPartnerInvite(pendingInviteCode);
-            console.info("[PERF-AUTH] landing google acceptPartnerInvite resolved");
             clearPendingInviteContext();
             setPendingInviteContext(null);
             navigate("/dashboard", { replace: true });
@@ -168,7 +160,6 @@ export function LandingPage() {
         trackAuthWindowError(error);
         setSignInError(getFriendlyApiError(error, "Google sign in failed. Please try again."));
       } finally {
-        console.info("[PERF-AUTH] landing google onSuccess after try/catch");
         setIsSigningIn(false);
       }
     },

@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { DynamicBackgroundLayout } from "./components/layout/DynamicBackgroundLayout";
+import { FPSMonitor } from "./components/ui/FPSMonitor";
 import { GlassLoader } from "./components/ui/GlassLoader";
 import { ServerOfflineOverlay } from "./components/ui/ServerOfflineOverlay";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -111,6 +112,7 @@ export function AppRouter() {
 
   return (
     <BrowserRouter>
+      <FPSMonitor />
       {isBlockingForServerDowntime ? <ServerOfflineOverlay /> : <AppRoutes />}
     </BrowserRouter>
   );

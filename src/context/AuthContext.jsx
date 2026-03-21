@@ -28,7 +28,6 @@ import {
 } from "../utils/authStorage";
 
 const AuthContext = createContext(null);
-
 function debugAuth(eventName, payload = {}) {
   void eventName;
   void payload;
@@ -312,28 +311,12 @@ export function AuthProvider({ children }) {
       return true;
     };
 
-    console.info("[PERF-AUTH] bootstrapSession before try", {
-      sequence: currentSequence,
-      hasAccessToken: Boolean(storedAccessToken),
-      hasRefreshToken: Boolean(storedRefreshToken)
-    });
-
     try {
-      console.info("[PERF-AUTH] bootstrapSession entered try", { sequence: currentSequence });
       if (storedAccessToken) {
-        console.info("[PERF-AUTH] bootstrapSession loading profile with access token", {
-          sequence: currentSequence
-        });
         await tryProfileLoad(storedAccessToken);
-        console.info("[PERF-AUTH] bootstrapSession completed via access token", {
-          sequence: currentSequence
-        });
         return;
       }
 
-      console.info("[PERF-AUTH] bootstrapSession refreshing access token", {
-        sequence: currentSequence
-      });
       const refreshPayload = await refreshAccessToken(storedRefreshToken, {
         skipUnauthorizedHandler: true
       });
@@ -345,9 +328,6 @@ export function AuthProvider({ children }) {
       saveAccessToken(refreshPayload.access_token);
       await tryProfileLoad(refreshPayload.access_token, {
         userHint: refreshPayload.user
-      });
-      console.info("[PERF-AUTH] bootstrapSession completed via refresh token", {
-        sequence: currentSequence
       });
     } catch (error) {
       console.error("[PERF-AUTH] bootstrapSession caught error", {
@@ -426,11 +406,6 @@ export function AuthProvider({ children }) {
       if (isLatestRun()) {
         setLoggedOut();
       }
-    } finally {
-      console.info("[PERF-AUTH] bootstrapSession after try/catch", {
-        sequence: currentSequence,
-        isLatestRun: isLatestRun()
-      });
     }
   }, [setLoggedOut]);
 
@@ -522,12 +497,8 @@ export function AuthProvider({ children }) {
       error: null
     }));
 
-    console.info("[PERF-AUTH] signInWithGoogleCredential before try");
-
     try {
-      console.info("[PERF-AUTH] signInWithGoogleCredential entered try");
       const authPayload = await signInWithGoogle(credential);
-      console.info("[PERF-AUTH] signInWithGoogleCredential received auth payload");
       saveAuthTokens({
         accessToken: authPayload.access_token,
         refreshToken: authPayload.refresh_token
@@ -537,16 +508,13 @@ export function AuthProvider({ children }) {
         userHint: authPayload.user
       });
       setState(profileState);
-      console.info("[PERF-AUTH] signInWithGoogleCredential profile load complete");
     } catch (error) {
       console.error("[PERF-AUTH] signInWithGoogleCredential caught error", error);
       if (isConnectivityError(error)) {
         setIsServerDown(true);
       }
       setLoggedOut(getFriendlyApiError(error, "Sign in failed. Please try again."));
-      throw error;
-    } finally {
-      console.info("[PERF-AUTH] signInWithGoogleCredential after try/catch");
+      return;
     }
   }, [setLoggedOut]);
 

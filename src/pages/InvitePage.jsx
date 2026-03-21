@@ -4,6 +4,7 @@ import { GlassLoader } from "../components/ui/GlassLoader";
 import { PremiumButton } from "../components/ui/PremiumButton";
 import { useAuth } from "../context/AuthContext";
 import { getFriendlyApiError, getInvitePreview } from "../services/apiClient";
+import { logAvatarDebug, summarizeAvatarUrl } from "../utils/avatarDebug";
 import { clearPendingInviteContext, setPendingInviteContext } from "../utils/pendingInviteStorage";
 
 const MAX_INVITE_CODE_LENGTH = 12;
@@ -33,6 +34,81 @@ export function InvitePage() {
   const ownInviteCode = useMemo(() => sanitizeInviteCode(user?.invite_code), [user?.invite_code]);
   const isAuthenticated = status === "unpaired" || status === "paired";
   const isSelfInvite = isAuthenticated && Boolean(inviteCode) && inviteCode === ownInviteCode;
+  const invitePreviewName = invitePreview?.name ?? "Your partner";
+  const invitePreviewAvatarFallbackUrl = useMemo(() => {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(invitePreviewName)}&background=0f766e&color=fff`;
+  }, [invitePreviewName]);
+  const preferredInvitePreviewAvatarUrl = useMemo(() => {
+    const avatarUrl = typeof invitePreview?.picture === "string" ? invitePreview.picture.trim() : "";
+
+    if (avatarUrl) {
+      return avatarUrl;
+    }
+
+    return invitePreviewAvatarFallbackUrl;
+  }, [invitePreview?.picture, invitePreviewAvatarFallbackUrl]);
+  const [invitePreviewAvatarUrl, setInvitePreviewAvatarUrl] = useState(preferredInvitePreviewAvatarUrl);
+
+  useEffect(() => {
+    setInvitePreviewAvatarUrl(preferredInvitePreviewAvatarUrl);
+  }, [preferredInvitePreviewAvatarUrl]);
+
+  useEffect(() => {
+    logAvatarDebug("invite_preview_avatar_resolved", {
+      page: "InvitePage",
+      role: "partner_preview",
+      inviteCode,
+      inviteName: invitePreviewName,
+      hasPrimaryAvatar: Boolean(invitePreview?.picture),
+      primaryAvatarSummary: summarizeAvatarUrl(invitePreview?.picture),
+      selectedAvatarSummary: summarizeAvatarUrl(invitePreviewAvatarUrl),
+      fallbackAvatarSummary: summarizeAvatarUrl(invitePreviewAvatarFallbackUrl),
+      isUsingFallback: invitePreviewAvatarUrl === invitePreviewAvatarFallbackUrl
+    });
+  }, [
+    inviteCode,
+    invitePreview?.picture,
+    invitePreviewAvatarFallbackUrl,
+    invitePreviewAvatarUrl,
+    invitePreviewName
+  ]);
+
+  const handleInvitePreviewAvatarError = (event) => {
+    const failedAvatarUrl = event.currentTarget.currentSrc || event.currentTarget.src;
+
+    logAvatarDebug("invite_preview_avatar_fallback_activated", {
+      page: "InvitePage",
+      role: "partner_preview",
+      inviteCode,
+      failedAvatarSummary: summarizeAvatarUrl(failedAvatarUrl),
+      fallbackAvatarSummary: summarizeAvatarUrl(invitePreviewAvatarFallbackUrl),
+      selectedAvatarSummary: summarizeAvatarUrl(invitePreviewAvatarUrl),
+      isOnline: typeof navigator !== "undefined" ? navigator.onLine : null,
+      referrerPolicy: event.currentTarget.referrerPolicy || null,
+      reason: "img_onerror"
+    });
+
+    event.currentTarget.onerror = null;
+    setInvitePreviewAvatarUrl((previousValue) => {
+      if (previousValue === invitePreviewAvatarFallbackUrl) {
+        return previousValue;
+      }
+
+      return invitePreviewAvatarFallbackUrl;
+    });
+  };
+
+  const handleInvitePreviewAvatarLoad = (event) => {
+    const loadedAvatarUrl = event.currentTarget.currentSrc || event.currentTarget.src;
+
+    logAvatarDebug("invite_preview_avatar_loaded", {
+      page: "InvitePage",
+      role: "partner_preview",
+      inviteCode,
+      loadedAvatarSummary: summarizeAvatarUrl(loadedAvatarUrl),
+      isFallback: loadedAvatarUrl === invitePreviewAvatarFallbackUrl
+    });
+  };
 
   useEffect(() => {
     let isCancelled = false;
@@ -153,21 +229,20 @@ export function InvitePage() {
         <p className="text-center text-xs uppercase tracking-[0.3em] text-teal-700/80">Invite Preview</p>
 
         <div className="mt-7 flex flex-col items-center text-center">
-          {invitePreview?.picture ? (
-            <img
-              src={invitePreview.picture}
-              alt={`${invitePreview.name} profile`}
-              className="h-24 w-24 rounded-full border border-white/70 object-cover shadow-[0_14px_28px_rgba(15,23,42,0.14)]"
-            />
-          ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-full border border-white/70 bg-white/85 text-3xl font-semibold text-teal-900 shadow-[0_14px_28px_rgba(15,23,42,0.14)]">
-              {(invitePreview?.name ?? "?").charAt(0).toUpperCase()}
-            </div>
-          )}
+          <img
+            src={invitePreviewAvatarUrl}
+            alt={`${invitePreviewName} profile`}
+            className="h-24 w-24 rounded-full border border-white/70 object-cover shadow-[0_14px_28px_rgba(15,23,42,0.14)]"
+            referrerPolicy="no-referrer"
+            onError={handleInvitePreviewAvatarError}
+            onLoad={handleInvitePreviewAvatarLoad}
+            loading="eager"
+            decoding="async"
+          />
 
           <h1 className="mt-6 font-serif text-3xl text-teal-950 sm:text-4xl">Connect your private space</h1>
           <p className="mt-3 text-sm text-stone-700 sm:text-base">
-            <span className="font-semibold text-teal-950">{invitePreview?.name ?? "Your partner"}</span> wants to connect vaults with you.
+            <span className="font-semibold text-teal-950">{invitePreviewName}</span> wants to connect vaults with you.
           </p>
         </div>
 
