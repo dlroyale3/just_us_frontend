@@ -37,6 +37,6 @@ export function logAvatarDebug(eventName, payload = {}) {
     return;
   }
 
-  const timestamp = new Date().toISOString();
-  console.log(`[avatar:${timestamp}] ${eventName}`, payload);
+  void eventName;
+  void payload;
 }

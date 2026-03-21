@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
   fireworksIntensity: 55,
   textSize: "small"
 };
+let settingsProviderRenderCount = 0;
 
 const SettingsContext = createContext(null);
 
@@ -87,6 +88,9 @@ function resolveNextValue(nextValueOrUpdater, previousValue) {
 }
 
 export function SettingsProvider({ children }) {
+  settingsProviderRenderCount += 1;
+  console.warn("[PERF] SettingsProvider rendered:", settingsProviderRenderCount);
+
   const [settings, setSettings] = useState(() => {
     if (typeof window === "undefined") {
       return DEFAULT_SETTINGS;

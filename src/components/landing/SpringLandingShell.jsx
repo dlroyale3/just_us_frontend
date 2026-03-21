@@ -1296,12 +1296,6 @@ export function SpringLandingShell({
                 <button
                   type="button"
                   onClick={() => {
-                    console.log(
-                      "[SettingsUI] TOGGLE APĂSAT - Valoare context existenta:",
-                      isCelebrateMode,
-                      "-> Schimb in:",
-                      !isCelebrateMode
-                    );
                     setIsCelebrateMode(!isCelebrateMode);
                   }}
                   className={classNames(

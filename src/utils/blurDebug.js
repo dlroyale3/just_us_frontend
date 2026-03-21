@@ -27,26 +27,9 @@ export function logBlurDiagnostics(element, contextLabel = "unknown") {
     return;
   }
 
+  void contextLabel;
+  void safeNumber;
   if (!(element instanceof Element)) {
-    console.log("[blur] invalid_element", { contextLabel });
     return;
   }
-
-  const computedStyle = window.getComputedStyle(element);
-  const boundingRect = element.getBoundingClientRect();
-
-  console.log("[blur] panel_diagnostics", {
-    contextLabel,
-    tagName: element.tagName,
-    className: element.className,
-    backdropFilter: computedStyle.backdropFilter || null,
-    webkitBackdropFilter: computedStyle.webkitBackdropFilter || null,
-    backgroundColor: computedStyle.backgroundColor || null,
-    borderColor: computedStyle.borderColor || null,
-    opacity: computedStyle.opacity || null,
-    width: safeNumber(boundingRect.width),
-    height: safeNumber(boundingRect.height),
-    x: safeNumber(boundingRect.x),
-    y: safeNumber(boundingRect.y)
-  });
 }

@@ -59,6 +59,7 @@ function notifyServerDown() {
 }
 
 async function requestJson(path, options = {}) {
+  const url = `${API_BASE_URL}${path}`;
   const headers = {
     Accept: "application/json"
   };
@@ -74,13 +75,14 @@ async function requestJson(path, options = {}) {
   let response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(url, {
       method: options.method ?? "GET",
       credentials: "include",
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined
     });
   } catch (error) {
+    console.error("[PERF] API Request Failed:", url);
     if (!options.skipServerDownHandler) {
       notifyServerDown();
     }
@@ -91,6 +93,7 @@ async function requestJson(path, options = {}) {
   const payload = rawBody ? safeJsonParse(rawBody) : null;
 
   if (!response.ok) {
+    console.error("[PERF] API Request Failed:", url);
     const apiError = new ApiError(payload?.message ?? `Request failed (${response.status})`, {
       status: response.status,
       errorCode: payload?.error,
@@ -105,6 +108,7 @@ async function requestJson(path, options = {}) {
 
     if (shouldTrySilentRefresh) {
       try {
+        console.error("[PERF] API Request Failed:", url);
         const nextAccessToken = await silentlyRefreshAccessToken();
 
         return requestJson(path, {

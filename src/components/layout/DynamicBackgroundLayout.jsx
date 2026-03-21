@@ -25,6 +25,7 @@ const FIREWORKS_INTENSITY_MAX = 100;
 const RECEIVE_LIVE_SOUND_URL = "/sounds/receive-live.mp3";
 const SEND_LIVE_SOUND_URL = "/sounds/send-live.mp3";
 const SCHEDULED_MESSAGE_SOUND_URL = "/sounds/scheduled-message.mp3";
+let layoutRenderCount = 0;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -182,6 +183,9 @@ function resolveIncomingLiveSenderId(payload) {
 }
 
 export function DynamicBackgroundLayout({ children }) {
+  layoutRenderCount += 1;
+  console.warn("[PERF] DynamicBackgroundLayout rendered:", layoutRenderCount);
+
   const { logout, status, user } = useAuth();
   const {
     season,
@@ -733,6 +737,15 @@ export function DynamicBackgroundLayout({ children }) {
           channel: "CoupleChannel"
         },
         {
+          connected() {
+            console.info("[PERF] WebSocket Connected");
+          },
+          disconnected() {
+            console.error("[PERF] WebSocket Disconnected/Error", new Error("ActionCable disconnected"));
+          },
+          rejected() {
+            console.error("[PERF] WebSocket Disconnected/Error", new Error("ActionCable subscription rejected"));
+          },
           received(payload) {
             const eventName = typeof payload?.event === "string" ? payload.event : "";
 

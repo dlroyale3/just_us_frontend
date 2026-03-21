@@ -56,6 +56,15 @@ export function useScheduledMessagesCable({ onMessageCreated, onMessageUpdated }
           channel: "CoupleChannel"
         },
         {
+          connected() {
+            console.info("[PERF] WebSocket Connected");
+          },
+          disconnected() {
+            console.error("[PERF] WebSocket Disconnected/Error", new Error("ActionCable disconnected"));
+          },
+          rejected() {
+            console.error("[PERF] WebSocket Disconnected/Error", new Error("ActionCable subscription rejected"));
+          },
           received(payload) {
             const eventName = typeof payload?.event === "string" ? payload.event : "";
             const message = extractScheduledMessage(payload);

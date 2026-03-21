@@ -16,6 +16,7 @@ import {
 
 const MAX_INVITE_CODE_LENGTH = 12;
 const GOOGLE_POPUP_GUARD_TIMEOUT_MS = 20000;
+let googleAuthLoginRenderCount = 0;
 
 function sanitizeInviteCode(value) {
   return (value ?? "")
@@ -26,12 +27,19 @@ function sanitizeInviteCode(value) {
 }
 
 export function LandingPage() {
+  googleAuthLoginRenderCount += 1;
+  console.warn("[PERF] GoogleAuth/Login rendered:", googleAuthLoginRenderCount);
+
   const { signInWithGoogleCredential, acceptPartnerInvite, error: sessionError } = useAuth();
   const navigate = useNavigate();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [signInError, setSignInError] = useState(null);
   const [pendingInviteContext, setPendingInviteContext] = useState(null);
   const googlePopupGuardTimeoutRef = useRef(null);
+
+  const trackAuthWindowError = (error) => {
+    console.error("[PERF] Auth/Window Error:", error);
+  };
 
   const clearGooglePopupGuardTimeout = () => {
     if (googlePopupGuardTimeoutRef.current !== null) {
@@ -57,13 +65,7 @@ export function LandingPage() {
 
     const logLandingPanels = (reason) => {
       const panelElements = Array.from(document.querySelectorAll("[data-blur-panel^='landing-']"));
-
-      console.log("[blur] landing_panel_scan", {
-        reason,
-        panelCount: panelElements.length,
-        pagePath: window.location.pathname,
-        visibilityState: document.visibilityState
-      });
+      void reason;
 
       panelElements.forEach((element) => {
         const panelKey = element.dataset.blurPanel || "landing-unknown";
@@ -158,18 +160,21 @@ export function LandingPage() {
           }
         }
       } catch (error) {
+        trackAuthWindowError(error);
         setSignInError(getFriendlyApiError(error, "Google sign in failed. Please try again."));
       } finally {
         setIsSigningIn(false);
       }
     },
-    onError: () => {
+    onError: (error) => {
       clearGooglePopupGuardTimeout();
+      trackAuthWindowError(error);
       setSignInError("Google sign in was canceled or failed.");
       setIsSigningIn(false);
     },
     onNonOAuthError: (nonOAuthError) => {
       clearGooglePopupGuardTimeout();
+      trackAuthWindowError(nonOAuthError);
 
       const errorType = nonOAuthError?.type;
       const isPopupClosedByUser = errorType === "popup_closed";
@@ -193,6 +198,7 @@ export function LandingPage() {
       googleLogin();
       popupAttemptStarted = true;
     } catch (error) {
+      trackAuthWindowError(error);
       setSignInError(getFriendlyApiError(error, "Google sign in failed to start. Please try again."));
       setIsSigningIn(false);
     } finally {

@@ -30,22 +30,8 @@ import {
 const AuthContext = createContext(null);
 
 function debugAuth(eventName, payload = {}) {
-  let isRuntimeDebugEnabled = false;
-
-  if (typeof window !== "undefined") {
-    try {
-      isRuntimeDebugEnabled = window.localStorage.getItem("justus_debug_auth") === "1";
-    } catch {
-      isRuntimeDebugEnabled = false;
-    }
-  }
-
-  if (!import.meta.env.DEV && !isRuntimeDebugEnabled) {
-    return;
-  }
-
-  const timestamp = new Date().toISOString();
-  console.log(`[auth:${timestamp}] ${eventName}`, payload);
+  void eventName;
+  void payload;
 }
 
 function summarizeAvatarUrl(value) {
