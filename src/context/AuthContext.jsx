@@ -197,20 +197,6 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const setRecoveringSession = useCallback((errorMessage) => {
-    debugAuth("set_recovering_session", { errorMessage });
-    setState((previousState) => {
-      const nextState = {
-        status: "loading",
-        user: previousState.user,
-        partner: previousState.partner,
-        error: errorMessage ?? null
-      };
-
-      return areAuthStatesEquivalent(previousState, nextState) ? previousState : nextState;
-    });
-  }, []);
-
   useEffect(() => {
     setUnauthorizedHandler((apiError) => {
       if (isSessionUnauthorizedError(apiError)) {
@@ -381,7 +367,8 @@ export function AuthProvider({ children }) {
 
       if (shouldKeepLocalSession) {
         if (isLatestRun()) {
-          setRecoveringSession("You are offline. Reconnecting automatically...");
+          setIsServerDown(true);
+          setLoggedOut("Server unavailable. Please try again shortly.");
         }
         return;
       }
@@ -418,7 +405,8 @@ export function AuthProvider({ children }) {
 
           if (shouldPreserveSession) {
             if (isLatestRun()) {
-              setRecoveringSession("You are offline. Reconnecting automatically...");
+              setIsServerDown(true);
+              setLoggedOut("Server unavailable. Please try again shortly.");
             }
             return;
           }
@@ -444,7 +432,7 @@ export function AuthProvider({ children }) {
         isLatestRun: isLatestRun()
       });
     }
-  }, [setLoggedOut, setRecoveringSession]);
+  }, [setLoggedOut]);
 
   useEffect(() => {
     if (isServerDown || !hasSeenServerDowntimeRef.current) {
@@ -552,6 +540,9 @@ export function AuthProvider({ children }) {
       console.info("[PERF-AUTH] signInWithGoogleCredential profile load complete");
     } catch (error) {
       console.error("[PERF-AUTH] signInWithGoogleCredential caught error", error);
+      if (isConnectivityError(error)) {
+        setIsServerDown(true);
+      }
       setLoggedOut(getFriendlyApiError(error, "Sign in failed. Please try again."));
       throw error;
     } finally {

@@ -16,7 +16,6 @@ import {
 
 const MAX_INVITE_CODE_LENGTH = 12;
 const GOOGLE_POPUP_GUARD_TIMEOUT_MS = 20000;
-let googleAuthLoginRenderCount = 0;
 
 function sanitizeInviteCode(value) {
   return (value ?? "")
@@ -27,9 +26,6 @@ function sanitizeInviteCode(value) {
 }
 
 export function LandingPage() {
-  googleAuthLoginRenderCount += 1;
-  console.warn("[PERF] GoogleAuth/Login rendered:", googleAuthLoginRenderCount);
-
   const { signInWithGoogleCredential, acceptPartnerInvite, error: sessionError } = useAuth();
   const navigate = useNavigate();
   const [isSigningIn, setIsSigningIn] = useState(false);

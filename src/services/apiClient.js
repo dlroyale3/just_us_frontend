@@ -1,6 +1,7 @@
 import { getRefreshToken, saveAccessToken } from "../utils/authStorage";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+const API_REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS ?? 15000);
 let unauthorizedHandler = null;
 let serverDownHandler = null;
 let accessTokenRefreshPromise = null;
@@ -60,6 +61,14 @@ function notifyServerDown() {
 
 async function requestJson(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
+  const abortController = typeof AbortController === "function" ? new AbortController() : null;
+  const timeoutId =
+    abortController && Number.isFinite(API_REQUEST_TIMEOUT_MS) && API_REQUEST_TIMEOUT_MS > 0
+      ? globalThis.setTimeout(() => {
+        abortController.abort();
+      }, API_REQUEST_TIMEOUT_MS)
+      : null;
+
   const headers = {
     Accept: "application/json"
   };
@@ -79,14 +88,35 @@ async function requestJson(path, options = {}) {
       method: options.method ?? "GET",
       credentials: "include",
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: abortController?.signal
     });
   } catch (error) {
+    if (timeoutId !== null) {
+      globalThis.clearTimeout(timeoutId);
+    }
+
+    if (error?.name === "AbortError") {
+      const timeoutError = new ApiError("Request timed out", {
+        status: 504,
+        errorCode: "request_timeout"
+      });
+      console.error("[PERF] API Request Failed:", url);
+      if (!options.skipServerDownHandler) {
+        notifyServerDown();
+      }
+      throw timeoutError;
+    }
+
     console.error("[PERF] API Request Failed:", url);
     if (!options.skipServerDownHandler) {
       notifyServerDown();
     }
     throw error;
+  }
+
+  if (timeoutId !== null) {
+    globalThis.clearTimeout(timeoutId);
   }
 
   const rawBody = await response.text();

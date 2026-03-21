@@ -3,7 +3,6 @@ import { createConsumer } from "@rails/actioncable";
 import { Outlet } from "react-router-dom";
 import { SpringLandingShell } from "../landing/SpringLandingShell";
 import { BackgroundFireworks } from "../relax/BackgroundFireworks";
-import { FPSMonitor } from "./FPSMonitor";
 import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { getNotifications } from "../../services/apiClient";
@@ -26,7 +25,6 @@ const FIREWORKS_INTENSITY_MAX = 100;
 const RECEIVE_LIVE_SOUND_URL = "/sounds/receive-live.mp3";
 const SEND_LIVE_SOUND_URL = "/sounds/send-live.mp3";
 const SCHEDULED_MESSAGE_SOUND_URL = "/sounds/scheduled-message.mp3";
-let layoutRenderCount = 0;
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -188,9 +186,6 @@ function areNotificationCountsEqual(left, right) {
 }
 
 export function DynamicBackgroundLayout({ children }) {
-  layoutRenderCount += 1;
-  console.warn("[PERF] DynamicBackgroundLayout rendered:", layoutRenderCount);
-
   const { logout, status, user } = useAuth();
   const {
     season,
@@ -215,8 +210,7 @@ export function DynamicBackgroundLayout({ children }) {
     setIsCelebrateMode,
     fireworksIntensity,
     setFireworksIntensity,
-    applySyncSettings,
-    resetSettings
+    applySyncSettings
   } = useSettings();
   const isPaired = status === "paired";
   const previousAuthStatusRef = useRef(status);
@@ -252,9 +246,8 @@ export function DynamicBackgroundLayout({ children }) {
 
       return { live: 0, scheduled: 0 };
     });
-    resetSettings();
     hasAutoUnmutedOnFirstInteractionRef.current = false;
-  }, [resetSettings, status]);
+  }, [status]);
 
   const registerAudioTrack = (audioTrack) => {
     if (audioTrack) {
@@ -860,7 +853,6 @@ export function DynamicBackgroundLayout({ children }) {
 
   return (
     <DynamicBackgroundControlsContext.Provider value={controlsContextValue}>
-      <FPSMonitor />
       <SpringLandingShell
         isControlPanelOpen={isControlPanelOpen}
         controlsPresentation={controlsPresentation}
