@@ -248,6 +248,7 @@ export function BackgroundFireworks({ intensity = 55, notificationVolume = 50, i
   const projectilesRef = useRef([]);
   const particlesRef = useRef([]);
   const flashesRef = useRef([]);
+  const isLoopActiveRef = useRef(false);
   const lastSectorRef = useRef(-1);
   const isLaunchAudioPreparedRef = useRef(false);
   const isLaunchAudioScheduledRef = useRef(false);
@@ -447,13 +448,35 @@ export function BackgroundFireworks({ intensity = 55, notificationVolume = 50, i
     resizeCanvas();
     let lastLaunchTime = performance.now();
 
+    const scheduleRender = () => {
+      if (isLoopActiveRef.current) {
+        return;
+      }
+
+      isLoopActiveRef.current = true;
+      rafIdRef.current = window.requestAnimationFrame(render);
+    };
+
+    const stopRender = () => {
+      if (!isLoopActiveRef.current) {
+        return;
+      }
+
+      window.cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+      isLoopActiveRef.current = false;
+    };
+
     const handleVisibilityChange = () => {
       const currentTime = performance.now();
       lastLaunchTime = currentTime;
 
       if (!document.hidden) {
+        scheduleRender();
         return;
       }
+
+      stopRender();
 
       projectilesRef.current = [];
       particlesRef.current = [];
@@ -486,7 +509,8 @@ export function BackgroundFireworks({ intensity = 55, notificationVolume = 50, i
           drawingContext.clearRect(0, 0, canvasNode.width, canvasNode.height);
         }
 
-        rafIdRef.current = window.requestAnimationFrame(render);
+        isLoopActiveRef.current = false;
+        rafIdRef.current = 0;
         return;
       }
 
@@ -587,13 +611,13 @@ export function BackgroundFireworks({ intensity = 55, notificationVolume = 50, i
       rafIdRef.current = window.requestAnimationFrame(render);
     };
 
-    rafIdRef.current = window.requestAnimationFrame(render);
+    scheduleRender();
 
     window.addEventListener("resize", resizeCanvas);
     window.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.cancelAnimationFrame(rafIdRef.current);
+      stopRender();
       window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("visibilitychange", handleVisibilityChange);
 

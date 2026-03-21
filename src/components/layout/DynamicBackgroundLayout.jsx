@@ -637,7 +637,7 @@ export function DynamicBackgroundLayout({ children }) {
     return () => {
       window.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [isControlPanelOpen, isSidebarOpen, setIsControlPanelOpen, setIsSidebarOpen]);
+  }, []);
 
   const clearNotificationCount = useCallback((type) => {
     if (type !== "live" && type !== "scheduled") {
@@ -812,18 +812,6 @@ export function DynamicBackgroundLayout({ children }) {
     toggleControlPanel
   ]);
 
-  console.log("[Background] Randare activa. Stare Celebrate Mode:", isCelebrateMode);
-  console.log("[layout:render_children]", {
-    status,
-    isServerDown: false,
-    hasChildren: Boolean(children),
-    willRenderOutlet: !children,
-    path: typeof window !== "undefined" ? window.location.pathname : null,
-    isControlPanelOpen,
-    isSidebarOpen,
-    controlsPresentation
-  });
-
   return (
     <DynamicBackgroundControlsContext.Provider value={controlsContextValue}>
       <SpringLandingShell
@@ -840,10 +828,6 @@ export function DynamicBackgroundLayout({ children }) {
             isNotificationMuted={isNotificationMuted}
           />
         )}
-        {console.log("[layout:children_mount]", {
-          path: typeof window !== "undefined" ? window.location.pathname : null,
-          renderedNode: children ? "children" : "outlet"
-        })}
         {children ?? <Outlet />}
       </SpringLandingShell>
     </DynamicBackgroundControlsContext.Provider>

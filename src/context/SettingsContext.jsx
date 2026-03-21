@@ -93,7 +93,6 @@ export function SettingsProvider({ children }) {
     }
 
     const saved = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    console.log("[SettingsContext] INIT - Citit din localStorage:", saved);
 
     if (!saved) {
       return DEFAULT_SETTINGS;
@@ -112,7 +111,6 @@ export function SettingsProvider({ children }) {
     }
 
     try {
-      console.log("[SettingsContext] SAVE - Se salveaza in localStorage:", settings);
       window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     } catch {
       // Best-effort persistence.
