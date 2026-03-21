@@ -87,6 +87,27 @@ function resolveNextValue(nextValueOrUpdater, previousValue) {
     : nextValueOrUpdater;
 }
 
+function areSettingsEqual(left, right) {
+  if (left === right) {
+    return true;
+  }
+
+  return (
+    left.season === right.season &&
+    left.weather === right.weather &&
+    left.timeOfDay === right.timeOfDay &&
+    left.isAutoPlay === right.isAutoPlay &&
+    left.autoPlaySpeed === right.autoPlaySpeed &&
+    left.isSoundMuted === right.isSoundMuted &&
+    left.soundVolume === right.soundVolume &&
+    left.isNotificationMuted === right.isNotificationMuted &&
+    left.notificationVolume === right.notificationVolume &&
+    left.isCelebrateMode === right.isCelebrateMode &&
+    left.fireworksIntensity === right.fireworksIntensity &&
+    left.textSize === right.textSize
+  );
+}
+
 export function SettingsProvider({ children }) {
   settingsProviderRenderCount += 1;
   console.warn("[PERF] SettingsProvider rendered:", settingsProviderRenderCount);
@@ -291,7 +312,39 @@ export function SettingsProvider({ children }) {
     setSettings(DEFAULT_SETTINGS);
   }, []);
 
-  const value = useMemo(() => ({
+  const updateSettings = useCallback((nextSettingsOrUpdater) => {
+    setSettings((previous) => {
+      const partialUpdate =
+        typeof nextSettingsOrUpdater === "function"
+          ? nextSettingsOrUpdater(previous)
+          : nextSettingsOrUpdater;
+
+      if (!partialUpdate || typeof partialUpdate !== "object") {
+        return previous;
+      }
+
+      const nextSettings = normalizeSettings({
+        ...previous,
+        ...partialUpdate
+      });
+
+      return areSettingsEqual(previous, nextSettings) ? previous : nextSettings;
+    });
+  }, []);
+
+  const toggleSoundMuted = useCallback(() => {
+    setIsSoundMuted((previous) => !previous);
+  }, [setIsSoundMuted]);
+
+  const toggleNotificationMuted = useCallback(() => {
+    setIsNotificationMuted((previous) => !previous);
+  }, [setIsNotificationMuted]);
+
+  const toggleCelebrateMode = useCallback(() => {
+    setIsCelebrateMode((previous) => !previous);
+  }, [setIsCelebrateMode]);
+
+  const contextValue = useMemo(() => ({
     season: settings.season,
     setSeason,
     weather: settings.weather,
@@ -304,18 +357,22 @@ export function SettingsProvider({ children }) {
     setAutoPlaySpeed,
     isSoundMuted: settings.isSoundMuted,
     setIsSoundMuted,
+    toggleSoundMuted,
     soundVolume: settings.soundVolume,
     setSoundVolume,
     isNotificationMuted: settings.isNotificationMuted,
     setIsNotificationMuted,
+    toggleNotificationMuted,
     notificationVolume: settings.notificationVolume,
     setNotificationVolume,
     isCelebrateMode: settings.isCelebrateMode,
     setIsCelebrateMode,
+    toggleCelebrateMode,
     fireworksIntensity: settings.fireworksIntensity,
     setFireworksIntensity,
     textSize: settings.textSize,
     setTextSize,
+    updateSettings,
     applySyncSettings,
     resetSettings
   }), [
@@ -326,17 +383,21 @@ export function SettingsProvider({ children }) {
     setIsAutoPlay,
     setAutoPlaySpeed,
     setIsSoundMuted,
+    toggleSoundMuted,
     setSoundVolume,
     setIsCelebrateMode,
+    toggleCelebrateMode,
     setFireworksIntensity,
     setNotificationVolume,
     setIsNotificationMuted,
+    toggleNotificationMuted,
     setTextSize,
+    updateSettings,
     applySyncSettings,
     resetSettings
   ]);
 
-  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+  return <SettingsContext.Provider value={contextValue}>{children}</SettingsContext.Provider>;
 }
 
 export function useSettings() {

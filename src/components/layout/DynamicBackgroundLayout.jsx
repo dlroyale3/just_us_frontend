@@ -182,6 +182,10 @@ function resolveIncomingLiveSenderId(payload) {
   return toPositiveInteger(messageCandidate?.sender_id ?? payload?.sender_id);
 }
 
+function areNotificationCountsEqual(left, right) {
+  return left.live === right.live && left.scheduled === right.scheduled;
+}
+
 export function DynamicBackgroundLayout({ children }) {
   layoutRenderCount += 1;
   console.warn("[PERF] DynamicBackgroundLayout rendered:", layoutRenderCount);
@@ -240,7 +244,13 @@ export function DynamicBackgroundLayout({ children }) {
     setIsControlPanelOpen(false);
     setIsSidebarOpen(false);
     setControlsPresentation("fixed");
-    setNotificationCounts({ live: 0, scheduled: 0 });
+    setNotificationCounts((previousCounts) => {
+      if (previousCounts.live === 0 && previousCounts.scheduled === 0) {
+        return previousCounts;
+      }
+
+      return { live: 0, scheduled: 0 };
+    });
     resetSettings();
     hasAutoUnmutedOnFirstInteractionRef.current = false;
   }, [resetSettings, status]);
@@ -648,10 +658,16 @@ export function DynamicBackgroundLayout({ children }) {
       return;
     }
 
-    setNotificationCounts((previousCounts) => ({
-      ...previousCounts,
-      [type]: 0
-    }));
+    setNotificationCounts((previousCounts) => {
+      if (previousCounts[type] === 0) {
+        return previousCounts;
+      }
+
+      return {
+        ...previousCounts,
+        [type]: 0
+      };
+    });
   }, []);
 
   const playNotificationSound = useCallback((type) => {
@@ -678,6 +694,10 @@ export function DynamicBackgroundLayout({ children }) {
       const fallbackCounts = replace ? { live: 0, scheduled: 0 } : previousCounts;
       const nextCounts = resolveNotificationCounts(payload, fallbackCounts);
 
+      if (areNotificationCountsEqual(previousCounts, nextCounts)) {
+        return previousCounts;
+      }
+
       if (playScheduledSound && nextCounts.scheduled > previousCounts.scheduled) {
         playScheduledNotificationSound();
       }
@@ -688,14 +708,26 @@ export function DynamicBackgroundLayout({ children }) {
 
   useEffect(() => {
     if (!isPaired) {
-      setNotificationCounts({ live: 0, scheduled: 0 });
+      setNotificationCounts((previousCounts) => {
+        if (previousCounts.live === 0 && previousCounts.scheduled === 0) {
+          return previousCounts;
+        }
+
+        return { live: 0, scheduled: 0 };
+      });
       return undefined;
     }
 
     const accessToken = getAccessToken();
 
     if (!accessToken) {
-      setNotificationCounts({ live: 0, scheduled: 0 });
+      setNotificationCounts((previousCounts) => {
+        if (previousCounts.live === 0 && previousCounts.scheduled === 0) {
+          return previousCounts;
+        }
+
+        return { live: 0, scheduled: 0 };
+      });
       return undefined;
     }
 
@@ -714,7 +746,7 @@ export function DynamicBackgroundLayout({ children }) {
     return () => {
       isCancelled = true;
     };
-  }, [isPaired, setNotificationCountsFromPayload, status]);
+  }, [isPaired, setNotificationCountsFromPayload]);
 
   useEffect(() => {
     if (!isPaired) {
@@ -777,7 +809,7 @@ export function DynamicBackgroundLayout({ children }) {
 
       consumer?.disconnect();
     };
-  }, [isPaired, playReceiveLiveSound, setNotificationCountsFromPayload, status, user?.id]);
+  }, [isPaired, playReceiveLiveSound, setNotificationCountsFromPayload, user?.id]);
 
   const controlsContextValue = useMemo(() => ({
     isControlPanelOpen,

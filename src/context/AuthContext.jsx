@@ -131,6 +131,19 @@ function isSessionUnauthorizedError(apiError) {
   return apiError?.status === 401 && SESSION_UNAUTHORIZED_ERROR_CODES.has(errorCode);
 }
 
+function areAuthStatesEquivalent(left, right) {
+  if (left === right) {
+    return true;
+  }
+
+  return (
+    left.status === right.status &&
+    left.error === right.error &&
+    left.user === right.user &&
+    left.partner === right.partner
+  );
+}
+
 function profileToState(profile, options = {}) {
   const fallbackUsers = [
     options.userHint,
@@ -172,22 +185,30 @@ export function AuthProvider({ children }) {
   const setLoggedOut = useCallback((error = null) => {
     debugAuth("set_logged_out", { error });
     clearAuthTokens();
-    setState({
-      status: "logged_out",
-      user: null,
-      partner: null,
-      error
+    setState((previousState) => {
+      const nextState = {
+        status: "logged_out",
+        user: null,
+        partner: null,
+        error
+      };
+
+      return areAuthStatesEquivalent(previousState, nextState) ? previousState : nextState;
     });
   }, []);
 
   const setRecoveringSession = useCallback((errorMessage) => {
     debugAuth("set_recovering_session", { errorMessage });
-    setState((previousState) => ({
-      status: "loading",
-      user: previousState.user,
-      partner: previousState.partner,
-      error: errorMessage ?? null
-    }));
+    setState((previousState) => {
+      const nextState = {
+        status: "loading",
+        user: previousState.user,
+        partner: previousState.partner,
+        error: errorMessage ?? null
+      };
+
+      return areAuthStatesEquivalent(previousState, nextState) ? previousState : nextState;
+    });
   }, []);
 
   useEffect(() => {
@@ -264,11 +285,17 @@ export function AuthProvider({ children }) {
     }
 
     if (isLatestRun()) {
-      setState((previousState) => ({
-        ...previousState,
-        status: "loading",
-        error: null
-      }));
+      setState((previousState) => {
+        if (previousState.status === "loading" && previousState.error === null) {
+          return previousState;
+        }
+
+        return {
+          ...previousState,
+          status: "loading",
+          error: null
+        };
+      });
     }
 
     const tryProfileLoad = async (token, options = {}) => {
@@ -291,7 +318,11 @@ export function AuthProvider({ children }) {
         return false;
       }
 
-      setState(profileState);
+      setState((previousState) => (
+        areAuthStatesEquivalent(previousState, profileState)
+          ? previousState
+          : profileState
+      ));
       return true;
     };
 
@@ -536,7 +567,7 @@ export function AuthProvider({ children }) {
     setLoggedOut();
   }, [setLoggedOut]);
 
-  const value = useMemo(() => ({
+  const contextValue = useMemo(() => ({
     status: state.status,
     user: state.user,
     partner: state.partner,
@@ -559,7 +590,7 @@ export function AuthProvider({ children }) {
     logout
   ]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
