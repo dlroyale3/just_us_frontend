@@ -248,7 +248,6 @@ export function BackgroundFireworks({ intensity = 55, notificationVolume = 50, i
   const projectilesRef = useRef([]);
   const particlesRef = useRef([]);
   const flashesRef = useRef([]);
-  const isLoopActiveRef = useRef(false);
   const lastSectorRef = useRef(-1);
   const isLaunchAudioPreparedRef = useRef(false);
   const isLaunchAudioScheduledRef = useRef(false);
@@ -446,73 +445,19 @@ export function BackgroundFireworks({ intensity = 55, notificationVolume = 50, i
 
     contextRef.current = ctx;
     resizeCanvas();
+    let animationFrameId = 0;
     let lastLaunchTime = performance.now();
 
-    const scheduleRender = () => {
-      if (isLoopActiveRef.current) {
-        return;
-      }
-
-      isLoopActiveRef.current = true;
-      rafIdRef.current = window.requestAnimationFrame(render);
-    };
-
-    const stopRender = () => {
-      if (!isLoopActiveRef.current) {
-        return;
-      }
-
-      window.cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
-      isLoopActiveRef.current = false;
-    };
-
-    const handleVisibilityChange = () => {
-      const currentTime = performance.now();
-      lastLaunchTime = currentTime;
-
-      if (!document.hidden) {
-        scheduleRender();
-        return;
-      }
-
-      stopRender();
-
-      projectilesRef.current = [];
-      particlesRef.current = [];
-      flashesRef.current = [];
-
-      const drawingContext = contextRef.current;
-      const canvasNode = canvasRef.current;
-
-      if (drawingContext && canvasNode) {
-        drawingContext.clearRect(0, 0, canvasNode.width, canvasNode.height);
-      }
-    };
-
-    const render = () => {
+    const renderLoop = () => {
       const drawingContext = contextRef.current;
       const { width, height } = dimensionsRef.current;
 
       if (!drawingContext || width === 0 || height === 0) {
-        rafIdRef.current = window.requestAnimationFrame(render);
+        animationFrameId = window.requestAnimationFrame(renderLoop);
         return;
       }
 
       const currentTime = performance.now();
-
-      if (document.hidden) {
-        lastLaunchTime = currentTime;
-        const canvasNode = canvasRef.current;
-
-        if (canvasNode) {
-          drawingContext.clearRect(0, 0, canvasNode.width, canvasNode.height);
-        }
-
-        isLoopActiveRef.current = false;
-        rafIdRef.current = 0;
-        return;
-      }
 
       const currentInterval = intensityToLaunchIntervalMs(intensityRef.current);
       const elapsedSinceLastLaunch = currentTime - lastLaunchTime;
@@ -608,18 +553,20 @@ export function BackgroundFireworks({ intensity = 55, notificationVolume = 50, i
       }
 
       drawingContext.globalAlpha = 1;
-      rafIdRef.current = window.requestAnimationFrame(render);
+      animationFrameId = window.requestAnimationFrame(renderLoop);
     };
 
-    scheduleRender();
+    animationFrameId = window.requestAnimationFrame(renderLoop);
+    rafIdRef.current = animationFrameId;
 
     window.addEventListener("resize", resizeCanvas);
-    window.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      stopRender();
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+      rafIdRef.current = 0;
       window.removeEventListener("resize", resizeCanvas);
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
 
       projectilesRef.current = [];
       particlesRef.current = [];

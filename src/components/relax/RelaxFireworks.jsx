@@ -214,7 +214,6 @@ export function RelaxFireworks({ notificationVolume = 50, isNotificationMuted = 
   const projectilesRef = useRef([]);
   const particlesRef = useRef([]);
   const flashesRef = useRef([]);
-  const isLoopActiveRef = useRef(false);
   const gestureRef = useRef({
     isPressing: false,
     startPoint: null,
@@ -558,55 +557,14 @@ export function RelaxFireworks({ notificationVolume = 50, isNotificationMuted = 
 
     contextRef.current = ctx;
     resizeCanvas();
+    let animationFrameId = 0;
 
-    const scheduleRender = () => {
-      if (isLoopActiveRef.current) {
-        return;
-      }
-
-      isLoopActiveRef.current = true;
-      rafIdRef.current = window.requestAnimationFrame(render);
-    };
-
-    const stopRender = () => {
-      if (!isLoopActiveRef.current) {
-        return;
-      }
-
-      window.cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
-      isLoopActiveRef.current = false;
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopRender();
-
-        const drawingContext = contextRef.current;
-        const canvasNode = canvasRef.current;
-
-        if (drawingContext && canvasNode) {
-          drawingContext.clearRect(0, 0, canvasNode.width, canvasNode.height);
-        }
-
-        return;
-      }
-
-      scheduleRender();
-    };
-
-    const render = () => {
+    const renderLoop = () => {
       const drawingContext = contextRef.current;
       const { width, height } = dimensionsRef.current;
 
       if (!drawingContext || width === 0 || height === 0) {
-        rafIdRef.current = window.requestAnimationFrame(render);
-        return;
-      }
-
-      if (document.hidden) {
-        isLoopActiveRef.current = false;
-        rafIdRef.current = 0;
+        animationFrameId = window.requestAnimationFrame(renderLoop);
         return;
       }
 
@@ -664,13 +622,13 @@ export function RelaxFireworks({ notificationVolume = 50, isNotificationMuted = 
       }
 
       drawingContext.globalAlpha = 1;
-      rafIdRef.current = window.requestAnimationFrame(render);
+      animationFrameId = window.requestAnimationFrame(renderLoop);
     };
 
-    scheduleRender();
+    animationFrameId = window.requestAnimationFrame(renderLoop);
+    rafIdRef.current = animationFrameId;
 
     window.addEventListener("resize", resizeCanvas);
-    window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -678,9 +636,11 @@ export function RelaxFireworks({ notificationVolume = 50, isNotificationMuted = 
     window.addEventListener("touchcancel", handleTouchEnd, { passive: false });
 
     return () => {
-      stopRender();
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+      rafIdRef.current = 0;
       window.removeEventListener("resize", resizeCanvas);
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("touchmove", handleTouchMove);

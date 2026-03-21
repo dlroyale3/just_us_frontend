@@ -352,7 +352,6 @@ body {
   -webkit-backdrop-filter: blur(4px) saturate(110%);
   backdrop-filter: blur(4px) saturate(110%);
   transform: translateZ(0);
-  will-change: transform, backdrop-filter;
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
