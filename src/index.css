@@ -337,8 +337,9 @@ body {
   background-color: rgba(255, 255, 255, 0.58);
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
-  -webkit-backdrop-filter: blur(22px) saturate(155%);
-  backdrop-filter: blur(22px) saturate(155%);
+  /* Temporary perf profile mode: reduce expensive fullscreen blur workload. */
+  -webkit-backdrop-filter: blur(6px) saturate(115%);
+  backdrop-filter: blur(6px) saturate(115%);
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
@@ -347,8 +348,9 @@ body {
 }
 
 .glass-internal-blur {
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  backdrop-filter: blur(16px) saturate(150%);
+  /* Temporary perf profile mode: reduce expensive nested blur workload. */
+  -webkit-backdrop-filter: blur(4px) saturate(110%);
+  backdrop-filter: blur(4px) saturate(110%);
   transform: translateZ(0);
   will-change: transform, backdrop-filter;
   -webkit-transform: translateZ(0);

@@ -3,6 +3,7 @@ import { createConsumer } from "@rails/actioncable";
 import { Outlet } from "react-router-dom";
 import { SpringLandingShell } from "../landing/SpringLandingShell";
 import { BackgroundFireworks } from "../relax/BackgroundFireworks";
+import { FPSMonitor } from "./FPSMonitor";
 import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { getNotifications } from "../../services/apiClient";
@@ -859,6 +860,7 @@ export function DynamicBackgroundLayout({ children }) {
 
   return (
     <DynamicBackgroundControlsContext.Provider value={controlsContextValue}>
+      <FPSMonitor />
       <SpringLandingShell
         isControlPanelOpen={isControlPanelOpen}
         controlsPresentation={controlsPresentation}
