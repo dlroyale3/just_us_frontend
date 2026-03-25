@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /$
+Disallow: /chat
+Disallow: /login
+Disallow: /invite
+Disallow: /pairing
+Sitemap: https://justus.chat/sitemap.xml
